@@ -85,11 +85,14 @@ class Automate {
 
     debug('tableNames: ', tableNames);
     const tableStructures = await Promise.all(tableNames.map(
-      (tableName) => this.queryInterface.describeTable(tableName),
+      (tableName) => this.queryInterface.describeTable(tableName, options.schema),
     ));
 
     const tableIndexes = await Promise.all(tableNames.map(
-      (tableName) => this.queryInterface.showIndex(tableName),
+      (tableName) => this.queryInterface.showIndex({
+        schema: options.schema,
+        tableName,
+      }),
     ));
 
     const tableForeignKeys = await Promise.all(tableNames.map(

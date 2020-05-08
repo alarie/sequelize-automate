@@ -11,6 +11,7 @@ const {
   processAttributesProperties,
   processOptionsProperties,
   getObjectTypeAnnotation,
+  getTSObjectTypeAnnotation
 } = require('./common/index');
 
 
@@ -19,9 +20,9 @@ const {
  * @param {object} definition
  * @param {object} options
  */
-function generateCode(definition, templatePath, options) {
+function generateCode(definition, options) {
   const source = fs
-    .readFileSync(templatePath ? templatePath : join(__dirname, file))
+    .readFileSync(join(__dirname, './template/typescript/user.text'))
     .toString();
 
   const ast = parse(source, {
@@ -29,7 +30,57 @@ function generateCode(definition, templatePath, options) {
     plugins: ['typescript'],
   });
 
+
+
   traverse(ast, {
+
+    TSInterfaceDeclaration(path) {
+      const { node } = path;
+      if (t.isIdentifier(node.id, { name: "IUserAttributes" })) {
+
+        const interfaceProps = _.map(definition.attributes, (field, name) => {
+          const key = t.identifier(name);
+          const type = getTSObjectTypeAnnotation(field.type);
+          const typeAnnotation = t.tsTypeAnnotation(type);
+          return Object.assign(t.tsPropertySignature(key, typeAnnotation), {
+            optional: Boolean(field.allowNull)
+          });
+        });
+        const newInterface = t.tsInterfaceDeclaration(
+          t.identifier(`I${bigCamelCase(definition.modelName)}Attributes`),
+          undefined,
+          undefined,
+          t.tsInterfaceBody(interfaceProps)
+        );
+        path.replaceWith(newInterface);
+      }
+
+      if (t.isIdentifier(node.id, { name: "IUserModel" })) {
+        node.id.name = `${bigCamelCase(definition.modelName)}`
+        node.extends[0] = t.interfaceExtends(t.identifier(`I${bigCamelCase(definition.modelName)}Attributes`))
+      }
+    },
+
+
+
+    ClassDeclaration: (path) => {
+      const { node } = path;
+      if (t.isIdentifier(node.id, { name: 'UserModel' })) {
+        const classBody = t.classBody(_.map(definition.attributes, (field, name) => {
+          const key = t.identifier(name)
+          const type = getObjectTypeAnnotation(field.type);
+          const typeAnnotation = t.typeAnnotation(type)
+          return Object.assign(
+            t.classProperty(key, undefined, typeAnnotation), {
+            optional: Boolean(field.allowNull || field.autoIncrement)
+          })
+        }))
+        node.id = t.identifier(bigCamelCase(definition.modelName));
+        node.body = classBody
+        // node.implements[0].expression.name = `${bigCamelCase(definition.modelName)}`;
+
+      }
+    },
     VariableDeclarator: (path) => {
       const { node } = path;
       if (t.isIdentifier(node.id, { name: 'attributes' })) {
@@ -54,9 +105,10 @@ function generateCode(definition, templatePath, options) {
       const { node } = path;
       if (
         t.isMemberExpression(node.callee)
-        && t.isIdentifier(node.callee.property, { name: 'define' })
+        && t.isIdentifier(node.callee.object, { name: 'UserModel' })
+        && t.isIdentifier(node.callee.property, { name: 'init' })
       ) {
-        node.arguments[0] = t.stringLiteral(definition.modelName);
+        node.callee.object = t.identifier(bigCamelCase(definition.modelName));
       }
     },
 
@@ -69,7 +121,7 @@ function generateCode(definition, templatePath, options) {
   });
 
   if (options.tsNoCheck) {
-    t.addComment(ast.program.body[0], 'leading', '@ts-nocheck', true);
+    t.addComment(ast.program.body[0], 'leading', ' @ts-nocheck', true);
   }
 
   const { code } = generate(ast, generateOptions);
@@ -141,12 +193,12 @@ function generateDefinition(definition) {
   return code;
 }
 
-function process(definitions, templatePath, options) {
+function process(definitions, options) {
   const modelCodes = definitions.map((definition) => {
     const { modelFileName } = definition;
     const fileType = 'model';
     const file = `${modelFileName}.ts`;
-    const code = generateCode(definition, templatePath, options);
+    const code = generateCode(definition, options);
     return {
       file,
       code,
@@ -154,19 +206,19 @@ function process(definitions, templatePath, options) {
     };
   });
 
-  const definitionCodes = definitions.map((definition) => {
-    const { modelFileName } = definition;
-    const fileType = 'definition';
-    const file = `${modelFileName}.d.ts`;
-    const code = generateDefinition(definition);
-    return {
-      file,
-      code,
-      fileType,
-    };
-  });
+  // const definitionCodes = definitions.map((definition) => {
+  //   const { modelFileName } = definition;
+  //   const fileType = 'definition';
+  //   const file = `${modelFileName}.d.ts`;
+  //   const code = generateDefinition(definition);
+  //   return {
+  //     file,
+  //     code,
+  //     fileType,
+  //   };
+  // });
 
-  const codes = _.concat([], modelCodes, definitionCodes);
+  const codes = _.concat([], modelCodes/*, definitionCodes*/);
   return codes;
 }
 

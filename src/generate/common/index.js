@@ -207,6 +207,46 @@ function getObjectTypeAnnotation(type) {
     return t.stringTypeAnnotation();
   }
   return t.anyTypeAnnotation();
+
+}
+function getTSObjectTypeAnnotation(type) {
+  if (type.indexOf('DataTypes.BOOLEAN') > -1) {
+    return t.tsBooleanKeyword();
+  }
+  if (type.indexOf('DataTypes.INTEGER') > -1) {
+    return t.tsNumberKeyword();
+  }
+  if (type.indexOf('DataTypes.BIGINT') > -1) {
+    return t.tsNumberKeyword();
+  }
+  if (type.indexOf('DataTypes.STRING') > -1) {
+    return t.tsStringKeyword();
+  }
+  if (type.indexOf('DataTypes.CHAR') > -1) {
+    return t.tsStringKeyword();
+  }
+  if (type.indexOf('DataTypes.REAL') > -1) {
+    return t.tsNumberKeyword();
+  }
+  if (type.indexOf('DataTypes.TEXT') > -1) {
+    return t.tsStringKeyword();
+  }
+  if (type.indexOf('DataTypes.DATE') > -1) {
+    return t.tsTypeReference(t.identifier("Date"))
+  }
+  if (type.indexOf('DataTypes.FLOAT') > -1) {
+    return t.tsNumberKeyword();
+  }
+  if (type.indexOf('DataTypes.DECIMAL') > -1) {
+    return t.tsNumberKeyword();
+  }
+  if (type.indexOf('DataTypes.DOUBLE') > -1) {
+    return t.tsNumberKeyword();
+  }
+  if (type.indexOf('DataTypes.UUIDV4') > -1) {
+    return t.tsStringKeyword();
+  }
+  return t.tsAnyKeyword();
 }
 
 
@@ -217,4 +257,5 @@ module.exports = {
   processAttributesProperties,
   processOptionsProperties,
   getObjectTypeAnnotation,
+  getTSObjectTypeAnnotation
 };

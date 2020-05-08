@@ -1,5 +1,21 @@
-import { Sequelize, DataTypes } from 'sequelize';
+import { Sequelize, DataTypes, Model } from "sequelize";
 
+export interface IUserAttributes {
+  id: number;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IUserModel extends IUserAttributes, Model {
+}
+
+export class UserModel extends Model {
+  id: number;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function(sequelize: Sequelize) {
   const attributes = {
@@ -51,7 +67,11 @@ export default function(sequelize: Sequelize) {
     },
   };
   const options = {
+    sequelize,
+    timestamps: false,
     tableName: 'user',
+    underscored: true,
+    freezeTableName: true,
     comment: 'user table',
     indexes: [{
       name: 'uk_name_email',
@@ -62,6 +82,6 @@ export default function(sequelize: Sequelize) {
       ],
     }]
   };
-  const UserModel = sequelize.define('userModel', attributes, options);
+  UserModel.init(attributes, options);
   return UserModel;
 }
